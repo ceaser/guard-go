@@ -26,7 +26,7 @@ module Guard
       while ps_go_pid.count > 0
         sleep sleep_time
       end
-      @proc.stop
+      @proc.stop unless @options[:test]
     end
 
     def ps_go_pid
@@ -45,18 +45,23 @@ module Guard
     private
 
     def run_go_command!
-      child_process_args = [@options[:cmd]]
-      child_process_args << "build" << @options[:server]
-      child_process_args[1..-1] = "test" if @options[:test]
-
-      @proc = ChildProcess.build *child_process_args
-      start_child_process!
+      
+      if @options[:test]
+        system "#{@options[:cmd]} test ./..."
+      else
+        child_process_args = [@options[:cmd]]
+        child_process_args << "build" << @options[:server]
+        
+        @proc = ChildProcess.build *child_process_args
+        start_child_process!
+      end
 
       return if @options[:build_only] || @options[:test]
 
       @proc.wait
       server_cmd = "./" + @options[:server].sub('.go', '')
-      @proc = ChildProcess.build server_cmd, options[:args_to_s]
+      args = [server_cmd, options[:args]].flatten
+      @proc = ChildProcess.build  *args
       start_child_process!
     end
 
